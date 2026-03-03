@@ -1,5 +1,5 @@
 // cancelBooking/index.ts
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import { createClient } from "https://npm.esm.sh/@supabase/supabase-js@2.39.3"
 import { corsHeaders } from '../_shared/cors.ts'
 import { handleError } from '../_shared/errors.ts'
 
