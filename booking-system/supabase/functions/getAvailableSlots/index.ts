@@ -1,5 +1,5 @@
 // getAvailableSlots/index.ts
-import { createClient } from "https://npm.esm.sh/@supabase/supabase-js@2.39.3"
+import { createClient } from "supabase"
 import { corsHeaders } from '../_shared/cors.ts'
 import { handleError } from '../_shared/errors.ts'
 
