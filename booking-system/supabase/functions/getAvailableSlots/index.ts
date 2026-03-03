@@ -1,5 +1,4 @@
 // getAvailableSlots/index.ts
-import { serve } from "https://deno.land/std@0.182.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { corsHeaders } from '../_shared/cors.ts'
 import { handleError } from '../_shared/errors.ts'
@@ -11,7 +10,7 @@ import { handleError } from '../_shared/errors.ts'
 // Actual business logic ported or shared as a dependency later depending on 
 // the mono-repo build setup for Deno Edge vs Next Node/Browser.
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }

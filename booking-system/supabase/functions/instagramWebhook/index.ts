@@ -1,9 +1,8 @@
 // instagramWebhook/index.ts
-import { serve } from "https://deno.land/std@0.182.0/http/server.ts"
 import { corsHeaders } from '../_shared/cors.ts'
 import { handleError } from '../_shared/errors.ts'
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   // Handle Instagram/Facebook webhooks verification challenge
   if (req.method === 'GET') {
     const url = new URL(req.url)
