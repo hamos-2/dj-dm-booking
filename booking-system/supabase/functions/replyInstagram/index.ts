@@ -30,9 +30,9 @@ Deno.serve(async (req) => {
       const { data: settings } = await supabase
         .from('integration_settings')
         .select('key, value')
-        .in('key', ['instagram_page_access_token', 'instagram_account_id'])
+        .in('key', ['instagram_page_access_token', 'instagram_access_token', 'instagram_account_id'])
       
-      const tokenSetting = settings?.find(s => s.key === 'instagram_page_access_token')
+      const tokenSetting = settings?.find(s => s.key === 'instagram_page_access_token' || s.key === 'instagram_access_token')
       const idSetting = settings?.find(s => s.key === 'instagram_account_id')
       
       if (tokenSetting?.value) pageAccessToken = tokenSetting.value
@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
     }
 
     if (!pageAccessToken || !instagramAccountId) {
-      throw new Error('INSTAGRAM_PAGE_ACCESS_TOKEN or INSTAGRAM_ACCOUNT_ID is missing. Please configure both in environment variables or integration_settings.')
+      throw new Error('INSTAGRAM_ACCESS_TOKEN or INSTAGRAM_ACCOUNT_ID is missing. The webhook needs to receive at least one DM to auto-save the Account ID, or you must set it manually in integration_settings.')
     }
 
     // 3. Send message via Graph API

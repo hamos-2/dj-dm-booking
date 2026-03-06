@@ -53,6 +53,24 @@ Deno.serve(async (req) => {
       console.log(`Processing ${body.entry.length} entries for object: ${body.object}`)
       
       for (const entry of body.entry) {
+        // [AUTO-SAVE INSTAGRAM ACCOUNT ID]
+        // entry.id is the Instagram Business Account ID that we need for the Reply API (Graph API URL).
+        if (entry.id) {
+          const { error: upsertError } = await supabase
+            .from('integration_settings')
+            .upsert({ 
+              key: 'instagram_account_id', 
+              value: entry.id,
+              description: 'Auto-saved Instagram Business Account ID from webhook'
+            }, { onConflict: 'key' });
+            
+          if (upsertError) {
+             console.error('Failed to auto-save instagram_account_id:', upsertError);
+          } else {
+             console.log(`Auto-saved instagram_account_id: ${entry.id}`);
+          }
+        }
+
         // 1. Handle Messenger Platform format (entry.messaging)
         if (entry.messaging) {
           console.log(`Entry ${entry.id} has ${entry.messaging.length} messaging items.`)
