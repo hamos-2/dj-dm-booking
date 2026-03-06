@@ -12,11 +12,11 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Forced Light Mode for consistent design */
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  color-scheme: light;
 }
 
 body {

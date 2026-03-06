@@ -3,10 +3,11 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { createClient } from '@/lib/supabase/client';
+import { format } from 'date-fns';
 
 export default function BookingPage() {
   const [selectedDate, setSelectedDate] = useState<string>(
-    new Date().toISOString().split('T')[0] // 오늘 날짜 기본
+    new Date().toLocaleDateString('sv').split('T')[0] // Local YYYY-MM-DD
   );
   const [availableSlots, setAvailableSlots] = useState<{start: string, end: string}[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
@@ -52,7 +53,17 @@ export default function BookingPage() {
 
   // 예약 확정 처리 (Edge Function 호출)
   const handleBooking = async () => {
-    if (!selectedSlot || !name || !email) {
+    // Trim values to avoid whitespace issues
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim();
+
+    console.log("Attempting booking with:", { selectedSlot, trimmedName, trimmedEmail });
+
+    if (!selectedSlot) {
+      alert("시간대를 선택해주세요.");
+      return;
+    }
+    if (!trimmedName || !trimmedEmail) {
       alert("이름과 이메일을 모두 입력해주세요.");
       return;
     }
@@ -63,9 +74,9 @@ export default function BookingPage() {
     try {
       const { data, error } = await supabase.functions.invoke('createBooking', {
         body: {
-          customer_name: name,
-          customer_email: email,
-          customer_phone: phone,
+          customer_name: trimmedName,
+          customer_email: trimmedEmail,
+          customer_phone: phone.trim(),
           start_time: slot?.start,
           end_time: slot?.end,
           source: 'web'
@@ -74,8 +85,9 @@ export default function BookingPage() {
 
       if (error) throw error;
       
-      // 성공 시 완료 페이지로 리다이렉트 (Mock에서는 단순 alert 처리 후 창 이동 가능)
-      window.location.href = '/booking/confirm';
+      // 성공 시 완료 페이지로 리다이렉트
+      const dateStr = encodeURIComponent(format(new Date(slot?.start || ''), 'MMMM dd, yyyy HH:mm'));
+      window.location.href = `/booking/confirm?name=${encodeURIComponent(trimmedName)}&time=${dateStr}`;
       
     } catch (error: any) {
       console.error("Booking Error:", error);
@@ -84,6 +96,18 @@ export default function BookingPage() {
       setIsBooking(false);
     }
   };
+
+  // Calculate min date (today) in local timezone
+  const today = new Date();
+  const offset = today.getTimezoneOffset() * 60000;
+  const localISOTime = new Date(today.getTime() - offset).toISOString();
+  const todayStr = localISOTime.split('T')[0];
+
+  // Calculate filtered slots (no past times if today)
+  const filteredSlots = availableSlots.filter(slot => {
+    if (selectedDate !== todayStr) return true;
+    return new Date(slot.start).getTime() > new Date().getTime();
+  });
 
   return (
     <main className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -99,8 +123,9 @@ export default function BookingPage() {
             <input 
               type="date" 
               value={selectedDate}
+              min={todayStr}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
+              className="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 transition-shadow text-gray-900"
             />
           </div>
         </div>
@@ -113,13 +138,13 @@ export default function BookingPage() {
           
           {isLoading ? (
             <div className="flex justify-center p-8 text-gray-400">Loading Slots...</div>
-          ) : availableSlots.length === 0 ? (
+          ) : filteredSlots.length === 0 ? (
             <div className="p-4 text-center text-sm text-gray-500 border rounded-lg bg-gray-50 bg-opacity-50">
                선택한 날짜에 예약 가능한 시간이 없습니다.
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3 mb-8">
-              {availableSlots.map((slot) => {
+              {filteredSlots.map((slot) => {
                 const dateObj = new Date(slot.start);
                 const timeString = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
                 

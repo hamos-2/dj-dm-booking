@@ -1,9 +1,46 @@
-import React from 'react';
+'use client';
+
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  // Mock Admin Badge
-  const unreadDMs = 3;
+  const supabase = createClient();
+  const pathname = usePathname();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    async function fetchUnread() {
+      const { count } = await supabase
+        .from('instagram_messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'unread');
+      
+      setUnreadCount(count || 0);
+    }
+    fetchUnread();
+    
+    // Optional: Real-time subscription
+    const channel = supabase
+      .channel('admin_unread_count')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'instagram_messages' }, () => {
+        fetchUnread();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const isActive = (path: string) => pathname === path;
+  const linkClass = (path: string) => 
+    `flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+      isActive(path) 
+        ? 'bg-gray-100 text-gray-900' 
+        : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+    }`;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
@@ -17,24 +54,28 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
         
         <nav className="flex-1 p-4 space-y-1">
-          <Link href="/admin" className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-900 bg-gray-100 hover:bg-gray-200 transition-colors">
+          <Link href="/admin" className={linkClass('/admin')}>
             <span>📊</span>
             <span>Dashboard</span>
           </Link>
           
-          <Link href="/admin/bookings" className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors">
+          <Link href="/admin/bookings" className={linkClass('/admin/bookings')}>
             <span>📋</span>
             <span>Bookings</span>
           </Link>
 
-          <Link href="/admin/instagram" className="flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors">
+          <Link href="/admin/instagram" className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+            isActive('/admin/instagram') 
+              ? 'bg-gray-100 text-gray-900' 
+              : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+          }`}>
             <div className="flex items-center space-x-3">
               <span>💬</span>
               <span>DM Inbox</span>
             </div>
-            {unreadDMs > 0 && (
+            {unreadCount > 0 && (
               <span className="bg-blue-100 text-blue-700 py-0.5 px-2 rounded-full text-xs font-semibold">
-                {unreadDMs}
+                {unreadCount}
               </span>
             )}
           </Link>
@@ -43,13 +84,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <h4 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
               Settings
             </h4>
-            <Link href="/admin/settings/availability" className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors">
+            <Link href="/admin/settings/availability" className={linkClass('/admin/settings/availability')}>
               <span>⏰</span>
               <span>Availability</span>
             </Link>
-            <Link href="/admin/settings" className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors">
+            <Link href="/admin/settings" className={linkClass('/admin/settings')}>
               <span>⚙️</span>
               <span>Integrations</span>
+            </Link>
+            <Link href="/admin/settings/environment" className={linkClass('/admin/settings/environment')}>
+              <span>🔐</span>
+              <span>Environment</span>
             </Link>
           </div>
         </nav>
@@ -63,7 +108,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
-        {/* Mobile Header (optional but good context) */}
+        {/* Mobile Header */}
         <header className="md:hidden h-14 bg-white border-b flex items-center px-4 justify-between">
             <span className="font-bold">Admin</span>
             <button>☰</button>

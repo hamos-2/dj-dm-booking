@@ -8,28 +8,68 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL('/admin/settings?error=no_code', request.url));
   }
 
-  // 이 엔드포인트는 Supabase Edge Function (googleOAuthCallback)으로 코드를 넘겨서 
-  // 토큰을 교환하고 DB에 저장하도록 브릿지 역할을 합니다.
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY; // 서버측에서 실행되므로 service_role 권장
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    const redirectUri = process.env.GOOGLE_REDIRECT_URI;
 
-    const response = await fetch(\`\${supabaseUrl}/functions/v1/googleOAuthCallback\`, {
+    if (!clientId || !clientSecret || !redirectUri) {
+      throw new Error('Google OAuth credentials not configured in .env.local');
+    }
+
+    // 1. Exchange code for tokens directly in Next.js
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': \`Bearer \${supabaseKey}\`
-      },
-      body: JSON.stringify({ code })
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code,
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
+        grant_type: 'authorization_code',
+      }),
     });
 
-    const result = await response.json();
+    const tokens = await tokenResponse.json();
+    if (!tokenResponse.ok) {
+      throw new Error(tokens.error_description || tokens.error || 'Failed to exchange token');
+    }
 
-    if (!response.ok) throw new Error(result.error || 'Failed to exchange token');
+    // 2. Get user info (to get email)
+    const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: { Authorization: `Bearer ${tokens.access_token}` },
+    });
+    const userInfo = await userResponse.json();
+
+    // 3. Save to Supabase using Service Role Key
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const tokenData: any = {
+      provider: 'google',
+      provider_user_email: userInfo.email,
+      access_token: tokens.access_token,
+      expiry_date: Date.now() + (tokens.expires_in * 1000),
+      updated_at: new Date().toISOString()
+    };
+
+    if (tokens.refresh_token) {
+      tokenData.refresh_token = tokens.refresh_token;
+    }
+
+    const { error: dbError } = await supabase
+      .from('oauth_tokens')
+      .upsert(tokenData, { onConflict: 'provider' });
+
+    if (dbError) throw dbError;
 
     return NextResponse.redirect(new URL('/admin/settings?success=google_connected', request.url));
   } catch (error: any) {
     console.error('OAuth Callback Error:', error);
-    return NextResponse.redirect(new URL(\`/admin/settings?error=\${encodeURIComponent(error.message)}\`, request.url));
+    const errorMsg = error.message || 'Unknown error occurred';
+    return NextResponse.redirect(new URL(`/admin/settings?error=${encodeURIComponent(errorMsg)}`, request.url));
   }
 }

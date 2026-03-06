@@ -1,8 +1,14 @@
-// app/booking/confirm/page.tsx
+'use client';
+
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
+import { useSearchParams } from 'next/navigation';
 
 export default function BookingConfirmationPage() {
+  const searchParams = useSearchParams();
+  const name = searchParams.get('name') || 'Guest';
+  const time = searchParams.get('time') || 'Selected Time';
+
   return (
     <main className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden p-8 text-center animate-in zoom-in-95 duration-500">
@@ -20,11 +26,11 @@ export default function BookingConfirmationPage() {
         <div className="bg-gray-50 rounded-xl p-4 mb-8 text-left border border-gray-100">
           <div className="mb-2">
             <span className="text-sm text-gray-500 block">Date & Time</span>
-            <span className="font-medium text-gray-900">June 10, 2025 at 09:00 AM</span>
+            <span className="font-medium text-gray-900">{time}</span>
           </div>
           <div>
             <span className="text-sm text-gray-500 block">Name</span>
-            <span className="font-medium text-gray-900">Hong Gil Dong</span>
+            <span className="font-medium text-gray-900">{name}</span>
           </div>
         </div>
 
