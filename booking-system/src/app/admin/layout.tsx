@@ -2,13 +2,38 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
   const pathname = usePathname();
+  const router = useRouter();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [session, setSession] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function checkUser() {
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+      
+      if (!session && pathname !== '/admin/login') {
+        router.push('/admin/login');
+      }
+      setLoading(false);
+    }
+    checkUser();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (!session && pathname !== '/admin/login') {
+        router.push('/admin/login');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [router, pathname]);
 
   useEffect(() => {
     async function fetchUnread() {
@@ -35,12 +60,31 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, []);
 
   const isActive = (path: string) => pathname === path;
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/admin/login');
+  };
+
   const linkClass = (path: string) => 
     `flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
       isActive(path) 
         ? 'bg-gray-100 text-gray-900' 
         : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
     }`;
+
+  if (loading && pathname !== '/admin/login') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center italic text-gray-400 animate-pulse">
+        Authenticating...
+      </div>
+    );
+  }
+
+  // Also skip sidebar if on login page
+  if (pathname === '/admin/login') {
+    return <>{children}</>;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
@@ -100,8 +144,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </nav>
         
         <div className="p-4 border-t border-gray-200">
-          <button className="flex w-full items-center justify-center space-x-2 px-4 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
-            Logout
+          <button 
+            onClick={handleLogout}
+            className="flex w-full items-center justify-center space-x-2 px-4 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors border border-red-100"
+          >
+            <span>🚪</span>
+            <span>Logout</span>
           </button>
         </div>
       </aside>
