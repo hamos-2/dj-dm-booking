@@ -131,6 +131,40 @@ export default function AdminBookingsPage() {
     }
   };
 
+  const handleStatusDropdown = async (id: string, newStatus: string, oldStatus: string) => {
+    if (newStatus === oldStatus) return;
+    
+    // Defer to proper Google Calendar sync events for cancel/restore
+    if (newStatus === 'canceled') {
+      // The select will temporary visually fall back until canceled completes
+      document.activeElement?.blur(); 
+      handleCancelClick(id);
+      return;
+    }
+    if (oldStatus === 'canceled' && newStatus === 'confirmed') {
+      document.activeElement?.blur();
+      handleRestoreClick(id);
+      return;
+    }
+    if (oldStatus === 'canceled' && newStatus !== 'confirmed') {
+      document.activeElement?.blur();
+      alert("취소된 예약은 '예약 확정(Confirmed)'으로 먼저 복구한 뒤 다른 상태로 변경해주세요.");
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const { error } = await supabase.from('bookings').update({ status: newStatus }).eq('id', id);
+      if (error) throw error;
+      await fetchBookings(); // Refresh UI
+    } catch (error) {
+       console.error('Status update failed:', error);
+       alert('상태 업데이트에 실패했습니다.');
+    } finally {
+       setIsProcessing(false);
+    }
+  };
+
   const filteredBookings = bookings.filter(b => {
     const matchesSearch = b.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
                          b.customer_email?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -186,9 +220,13 @@ export default function AdminBookingsPage() {
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-700 outline-none focus:ring-2 focus:ring-blue-500/20"
              >
-                <option>All Statuses</option>
-                <option>Confirmed</option>
-                <option>Canceled</option>
+                <option value="All Statuses">All Statuses</option>
+                <option value="inquiry">문의 (Inquiry)</option>
+                <option value="consultation_scheduled">상담 예정 (Consultation)</option>
+                <option value="pending_deposit">입금 대기 (Pending)</option>
+                <option value="confirmed">예약 확정 (Confirmed)</option>
+                <option value="completed">작업 완료 (Completed)</option>
+                <option value="canceled">예약 취소 (Canceled)</option>
              </select>
              <select 
                 value={sourceFilter} 
@@ -233,6 +271,12 @@ export default function AdminBookingsPage() {
               <thead className="bg-gray-50">
                 <tr>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    상태
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    예약 시간
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     고객명
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -240,12 +284,6 @@ export default function AdminBookingsPage() {
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     전화번호
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    예약 시간
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    상태
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     출처
@@ -271,6 +309,31 @@ export default function AdminBookingsPage() {
                 ) : (
                   paginatedBookings.map((booking) => (
                     <tr key={booking.id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <select
+                          value={booking.status?.toLowerCase() || 'inquiry'}
+                          onChange={(e) => handleStatusDropdown(booking.id, e.target.value, booking.status?.toLowerCase() || 'inquiry')}
+                          disabled={isProcessing}
+                          className={`px-2 py-1 text-xs font-semibold rounded-full border border-transparent hover:border-gray-300 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer ${
+                            booking.status?.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' :
+                            booking.status?.toLowerCase() === 'confirmed' ? 'bg-blue-100 text-blue-800' :
+                            booking.status?.toLowerCase() === 'pending_deposit' ? 'bg-yellow-100 text-yellow-800' :
+                            booking.status?.toLowerCase() === 'consultation_scheduled' ? 'bg-purple-100 text-purple-800' :
+                            booking.status?.toLowerCase() === 'canceled' ? 'bg-red-100 text-red-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}
+                        >
+                          <option value="inquiry">문의 (Inquiry)</option>
+                          <option value="consultation_scheduled">상담 예정 (Consultation)</option>
+                          <option value="pending_deposit">입금 대기 (Pending)</option>
+                          <option value="confirmed">예약 확정 (Confirmed)</option>
+                          <option value="completed">작업 완료 (Completed)</option>
+                          <option value="canceled">예약 취소 (Canceled)</option>
+                        </select>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {format(new Date(booking.start_time), 'yyyy-MM-dd HH:mm')}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         {booking.customer_name}
                       </td>
@@ -281,20 +344,10 @@ export default function AdminBookingsPage() {
                         {booking.customer_phone}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {format(new Date(booking.start_time), 'yyyy-MM-dd HH:mm')}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          booking.status === 'Confirmed' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
-                          {booking.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {booking.source}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        {booking.status === 'Confirmed' ? (
+                        {booking.status?.toLowerCase() !== 'canceled' ? (
                           <button 
                             onClick={() => handleCancelClick(booking.id)}
                             className="text-red-600 hover:text-red-900 disabled:opacity-50"

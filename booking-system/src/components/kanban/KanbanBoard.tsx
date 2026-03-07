@@ -174,31 +174,35 @@ export function KanbanBoard() {
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    if (!over) {
+    if (!over || !activeItem) {
       setActiveId(null);
       setActiveItem(null);
       return;
     }
 
-    const id = active.id;
-    const overId = over.id;
+    const id = active.id as string;
+    const overId = over.id as string;
 
-    const activeContainer = Object.keys(items).find(key => items[key].some(i => i.id === id));
     const overContainer = Object.keys(items).find(key => items[key].some(i => i.id === overId)) || (COLUMNS.find(c => c.id === overId)?.id);
 
-    if (activeContainer && overContainer && activeContainer !== overContainer) {
-       // Save to DB
-       updateBookingStatus(id as string, overContainer);
-    } else if (activeContainer && activeContainer === overContainer) {
-      // Reorder within same column
-      const activeIndex = items[activeContainer].findIndex(i => i.id === id);
-      const overIndex = items[activeContainer].findIndex(i => i.id === overId);
-      
-      if (activeIndex !== overIndex) {
-         setItems((prev) => ({
-           ...prev,
-           [activeContainer]: arrayMove(prev[activeContainer], activeIndex, overIndex)
-         }));
+    if (overContainer) {
+      // Check if the container it landed in is different from its original status
+      if (activeItem.status !== overContainer) {
+        // Optimistically update the local activeItem status
+        activeItem.status = overContainer;
+        // Save to DB
+        updateBookingStatus(id, overContainer);
+      } else {
+        // Same column, handle reordering logic
+        const activeIndex = items[overContainer].findIndex(i => i.id === id);
+        const overIndex = items[overContainer].findIndex(i => i.id === overId);
+        
+        if (activeIndex !== -1 && overIndex !== -1 && activeIndex !== overIndex) {
+           setItems((prev) => ({
+             ...prev,
+             [overContainer]: arrayMove(prev[overContainer], activeIndex, overIndex)
+           }));
+        }
       }
     }
 
