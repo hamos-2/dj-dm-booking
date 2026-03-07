@@ -208,7 +208,7 @@ export function KanbanBoard({ bookings, onStatusChange }: KanbanBoardProps) {
   };
 
   return (
-    <div className="flex h-[calc(100vh-12rem)] overflow-x-auto gap-4 pb-4">
+    <div className="flex h-[calc(100vh-12rem)] overflow-x-auto gap-4 pb-4 snap-x snap-mandatory">
       <DndContext 
         sensors={sensors}
         collisionDetection={closestCorners}

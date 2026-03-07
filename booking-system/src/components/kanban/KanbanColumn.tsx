@@ -37,7 +37,7 @@ export function KanbanColumn({ id, title, items }: Props) {
   };
 
   return (
-    <div className="flex flex-col flex-shrink-0 w-80 bg-gray-50/80 rounded-xl border border-gray-200 shadow-sm">
+    <div className="flex flex-col flex-shrink-0 w-[85vw] sm:w-80 md:w-72 lg:w-80 xl:w-[320px] bg-gray-50/80 rounded-xl border border-gray-200 shadow-sm snap-center">
       <div className={`p-4 border-b rounded-t-xl flex justify-between items-center ${getHeaderColor(id)}`}>
         <h3 className="font-semibold text-sm">{title}</h3>
         <span className={`text-xs py-0.5 px-2.5 rounded-full font-bold ${getBadgeColor(id)}`}>
