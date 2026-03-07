@@ -18,9 +18,21 @@ export default function BookingPage() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [isBooking, setIsBooking] = useState(false);
+  const [tattooPlacement, setTattooPlacement] = useState('');
+  const [estimatedSize, setEstimatedSize] = useState('');
+  const [notes, setNotes] = useState('');
+  const [referenceImages, setReferenceImages] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [consentChecked, setConsentChecked] = useState(false);
 
   // Initialize Supabase client
   const supabase = createClient();
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setReferenceImages(Array.from(e.target.files));
+    }
+  };
 
   // 날짜 변경 시 슬롯 조회 (Edge Function 호출)
   useEffect(() => {
@@ -31,6 +43,9 @@ export default function BookingPage() {
 
       try {
         const { data, error } = await supabase.functions.invoke('getAvailableSlots', {
+          headers: {
+            Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`
+          },
           body: { date: selectedDate, timezone: 'Asia/Seoul' }
         });
 
@@ -67,19 +82,57 @@ export default function BookingPage() {
       alert("이름과 이메일을 모두 입력해주세요.");
       return;
     }
+    if (!consentChecked) {
+      alert("이용 약관 및 시술 동의서에 동의해주세요.");
+      return;
+    }
 
     setIsBooking(true);
     const slot = availableSlots.find(s => s.start === selectedSlot);
 
     try {
+      let reference_image_urls: string[] = [];
+
+      if (referenceImages.length > 0) {
+        setIsUploading(true);
+        for (const file of referenceImages) {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${Math.random().toString(36).substring(7)}.${fileExt}`;
+          const filePath = `public/${Date.now()}_${fileName}`;
+
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('crm_images')
+            .upload(filePath, file);
+
+          if (uploadError) {
+            console.error("Upload error:", uploadError);
+            throw new Error("이미지 업로드에 실패했습니다. 다시 시도해주세요.");
+          }
+
+          const { data: urlData } = supabase.storage
+            .from('crm_images')
+            .getPublicUrl(filePath);
+
+          reference_image_urls.push(urlData.publicUrl);
+        }
+        setIsUploading(false);
+      }
+
       const { data, error } = await supabase.functions.invoke('createBooking', {
+        headers: {
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`
+        },
         body: {
           customer_name: trimmedName,
           customer_email: trimmedEmail,
           customer_phone: phone.trim(),
           start_time: slot?.start,
           end_time: slot?.end,
-          source: 'web'
+          source: 'web',
+          tattoo_placement: tattooPlacement,
+          estimated_size: estimatedSize,
+          notes: notes,
+          reference_image_urls: reference_image_urls
         }
       });
 
@@ -91,9 +144,10 @@ export default function BookingPage() {
       
     } catch (error: any) {
       console.error("Booking Error:", error);
-      alert(error.message || "예약 중 충돌 등의 오류가 발생했습니다. 다시 시도해주세요.");
+      alert(error.message || "예약 중 오류가 발생했습니다. 다시 시도해주세요.");
     } finally {
       setIsBooking(false);
+      setIsUploading(false);
     }
   };
 
@@ -184,8 +238,64 @@ export default function BookingPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500"
               />
-              <Button fullWidth onClick={handleBooking} disabled={isBooking}>
-                {isBooking ? 'Processing...' : 'Confirm Booking'}
+              <input 
+                type="tel" 
+                placeholder="Phone Number (optional)" 
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input 
+                type="text" 
+                placeholder="Tattoo Placement (e.g., forearm, back)" 
+                value={tattooPlacement}
+                onChange={(e) => setTattooPlacement(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input 
+                type="text" 
+                placeholder="Estimated Size (e.g., 5x5 cm)" 
+                value={estimatedSize}
+                onChange={(e) => setEstimatedSize(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <textarea 
+                placeholder="Additional Notes" 
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 min-h-[80px]"
+              />
+              <div className="w-full border border-gray-300 rounded-lg p-2.5 text-sm text-gray-600">
+                <label className="block font-medium mb-1">Reference Images</label>
+                <input 
+                  type="file" 
+                  multiple 
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Consent Section */}
+              <div className="flex items-start space-x-3 pt-2">
+                <div className="flex items-center h-5">
+                  <input 
+                    id="consent" 
+                    type="checkbox" 
+                    checked={consentChecked}
+                    onChange={(e) => setConsentChecked(e.target.checked)}
+                    className="w-4 h-4 border border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-blue-300" 
+                    required 
+                  />
+                </div>
+                <label htmlFor="consent" className="text-sm font-medium text-gray-900 leading-tight">
+                  개인정보 수집 및 타투 시술 기본 약관에 동의합니다. <br/>
+                  <span className="text-xs text-gray-500 font-normal">예약금 입금 전에는 일정이 확정되지 않으며 상담을 통해 최종 결정됩니다.</span>
+                </label>
+              </div>
+
+              <Button fullWidth onClick={handleBooking} disabled={isBooking || isUploading || !consentChecked}>
+                {isBooking || isUploading ? 'Processing...' : 'Confirm Booking'}
               </Button>
             </div>
           )}

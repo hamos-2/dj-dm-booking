@@ -10,7 +10,7 @@ export async function GET() {
   const { data, error } = await supabase
     .from('integration_settings')
     .select('*')
-    .ilike('key', 'instagram_%');
+    .in('key', ['instagram_verify_token', 'instagram_access_token', 'facebook_page_id', 'facebook_page_name']);
 
   if (error) {
     return Response.json({ error: error.message }, { status: 500 });
@@ -33,10 +33,27 @@ export async function POST(req: Request) {
 
   const { settings } = await req.json();
 
-  const updates = Object.entries(settings).map(([key, value]) => ({
+  let updates = Object.entries(settings).map(([key, value]) => ({
     key,
     value: String(value)
   }));
+
+  // Auto-fetch Facebook Page ID if a token is provided
+  if (settings.instagram_access_token) {
+    try {
+      const fbReq = await fetch(`https://graph.facebook.com/v25.0/me?access_token=${settings.instagram_access_token}`);
+      const fbData = await fbReq.json();
+      
+      if (fbData.id) {
+        updates.push({ key: 'facebook_page_id', value: fbData.id });
+      }
+      if (fbData.name) {
+        updates.push({ key: 'facebook_page_name', value: fbData.name });
+      }
+    } catch (e) {
+      console.error('Failed to auto-fetch page ID:', e);
+    }
+  }
 
   const { error } = await supabase
     .from('integration_settings')

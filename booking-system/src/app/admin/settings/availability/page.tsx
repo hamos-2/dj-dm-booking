@@ -11,7 +11,7 @@ export default function AvailabilitySettingsPage() {
   const [slotDuration, setSlotDuration] = useState(60);
   const [bufferTime, setBufferTime] = useState(15);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<{type: 'idle' | 'loading' | 'success' | 'error', message?: string}>({type: 'idle'});
 
   useEffect(() => {
     async function fetchAvailability() {
@@ -56,7 +56,7 @@ export default function AvailabilitySettingsPage() {
   };
 
   const handleSave = async () => {
-    setSaving(true);
+    setSaveStatus({ type: 'loading' });
     try {
       const payload = {
         schedule: schedule.map(s => ({
@@ -76,12 +76,14 @@ export default function AvailabilitySettingsPage() {
 
       if (result.error) throw new Error(result.error);
       
-      alert('설정이 저장되었습니다!');
+      setSaveStatus({ type: 'success', message: '설정이 저장되었습니다!' });
+      
+      setTimeout(() => {
+        setSaveStatus({ type: 'idle' });
+      }, 3000);
     } catch (err: any) {
       console.error(err);
-      alert('저장 중 오류가 발생했습니다: ' + err.message);
-    } finally {
-      setSaving(false);
+      setSaveStatus({ type: 'error', message: err.message || '저장 중 오류가 발생했습니다.'});
     }
   };
 
@@ -170,13 +172,22 @@ export default function AvailabilitySettingsPage() {
             })}
         </div>
 
-        <div className="pt-4 flex justify-end">
+        <div className="pt-4 flex flex-col items-end gap-3">
+            {saveStatus.type !== 'idle' && (
+              <div className={`p-3 rounded-md text-sm font-medium w-full sm:w-auto ${
+                saveStatus.type === 'error' ? 'bg-red-50 text-red-600 border border-red-100' : 
+                saveStatus.type === 'success' ? 'bg-green-50 text-green-700 border border-green-100' :
+                'bg-blue-50 text-blue-600 border border-blue-100'
+              }`}>
+                {saveStatus.type === 'loading' ? 'Processing...' : saveStatus.message}
+              </div>
+            )}
             <button 
               onClick={handleSave}
-              disabled={saving}
+              disabled={saveStatus.type === 'loading'}
               className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-50"
             >
-                {saving ? 'Saving...' : 'Save Configuration'}
+                {saveStatus.type === 'loading' ? 'Saving...' : 'Save Configuration'}
             </button>
         </div>
       </div>

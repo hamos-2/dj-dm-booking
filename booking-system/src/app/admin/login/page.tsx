@@ -21,18 +21,25 @@ export default function LoginPage() {
     setMessage(null);
 
     if (isSignUp) {
-      // Handle Sign Up
-      const { error, data } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-
-      if (error) {
-        setError(error.message);
-      } else if (data.session == null) {
-        setMessage('Registration successful! Please check your email to confirm your account.');
-      } else {
-        router.push('/admin');
+      // Handle Sign Up via custom API to auto-confirm
+      try {
+        const response = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok) {
+          setError(result.error || 'Signup failed');
+        } else {
+          setMessage(result.message);
+          // Auto-switch to sign-in mode after successful signup
+          setIsSignUp(false);
+        }
+      } catch (err) {
+        setError('An unexpected error occurred during signup');
       }
     } else {
       // Handle Sign In

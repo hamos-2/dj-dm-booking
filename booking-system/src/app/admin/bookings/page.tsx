@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { format } from 'date-fns';
+import { KanbanBoard } from '@/components/kanban/KanbanBoard';
 
 export default function AdminBookingsPage() {
   const supabase = createClient();
@@ -10,8 +11,10 @@ export default function AdminBookingsPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All Statuses');
+  const [sourceFilter, setSourceFilter] = useState('All Sources');
   const [dateFilter, setDateFilter] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [currentPage, setCurrentPage] = useState(1);
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const itemsPerPage = 7;
 
   // Modal State
@@ -133,6 +136,10 @@ export default function AdminBookingsPage() {
                          b.customer_email?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'All Statuses' || b.status?.toLowerCase() === statusFilter.toLowerCase();
     
+    // Support mapping 'insta' filter to 'instagram' source
+    const filterSrc = sourceFilter.toLowerCase() === 'insta' ? 'instagram' : sourceFilter.toLowerCase();
+    const matchesSource = sourceFilter === 'All Sources' || b.source?.toLowerCase() === filterSrc;
+    
     // Date filter logic (Robust comparison using yyyy-MM-dd)
     let bookingDate = '';
     try {
@@ -142,7 +149,7 @@ export default function AdminBookingsPage() {
     }
     const matchesDate = !dateFilter || bookingDate === dateFilter;
 
-    return matchesSearch && matchesStatus && matchesDate;
+    return matchesSearch && matchesStatus && matchesSource && matchesDate;
   });
 
   // Removed handleCancel and handleRestore as they are replaced by modal-driven functions
@@ -156,179 +163,230 @@ export default function AdminBookingsPage() {
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, statusFilter, dateFilter]);
+  }, [searchTerm, statusFilter, sourceFilter, dateFilter]);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex items-center justify-between pb-4 border-b border-gray-200">
-        <h1 className="text-2xl font-bold text-gray-900">Bookings List</h1>
-        <button 
-          onClick={fetchBookings}
-          className="text-sm font-medium text-blue-600 hover:text-blue-800"
-        >
-          Refresh
-        </button>
-      </div>
-
-      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-        <div className="flex space-x-2">
-            <select 
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="border border-gray-300 rounded-md text-sm p-2 outline-none focus:ring-1 focus:ring-blue-500 text-gray-900"
-            >
+        <div className="flex gap-4 p-6 pt-0 border-b border-gray-100 flex-wrap lg:flex-nowrap justify-between">
+           <div className="flex gap-4 flex-wrap flex-1">
+             <div className="relative">
+                <input 
+                  type="text"
+                  placeholder="고객 이름 검색..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all w-60"
+                />
+                <svg className="w-4 h-4 text-gray-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+             </div>
+             <select 
+                value={statusFilter} 
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-700 outline-none focus:ring-2 focus:ring-blue-500/20"
+             >
                 <option>All Statuses</option>
                 <option>Confirmed</option>
                 <option>Canceled</option>
-            </select>
-            <input 
-              type="date" 
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              className="border border-gray-300 rounded-md text-sm p-2 outline-none focus:ring-1 focus:ring-blue-500 text-gray-900"
-            />
-        </div>
-        <div className="w-full sm:w-64 relative">
+             </select>
+             <select 
+                value={sourceFilter} 
+                onChange={(e) => setSourceFilter(e.target.value)}
+                className="border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-700 outline-none focus:ring-2 focus:ring-blue-500/20"
+             >
+                <option>All Sources</option>
+                <option>Web</option>
+                <option>Insta</option>
+             </select>
              <input 
-               type="text" 
-               placeholder="Search by name or email" 
-               value={searchTerm}
-               onChange={(e) => setSearchTerm(e.target.value)}
-               className="w-full border border-gray-300 pl-3 pr-8 py-2 rounded-md text-sm outline-none focus:ring-1 focus:ring-blue-500 text-gray-900"
+                type="date" 
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                className="border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-700 outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
              />
-             <span className="absolute right-3 top-2.5 text-gray-400">🔍</span>
+           </div>
+           
+           <div className="flex bg-gray-100 p-1 rounded-lg">
+              <button 
+                onClick={() => setViewMode('list')}
+                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${viewMode === 'list' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                리스트 뷰
+              </button>
+              <button 
+                onClick={() => setViewMode('kanban')}
+                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${viewMode === 'kanban' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                칸반 보드
+              </button>
+           </div>
         </div>
-      </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        {loading ? (
-          <div className="p-12 text-center text-gray-500">Loading bookings...</div>
+        {viewMode === 'kanban' ? (
+           <div className="p-6">
+             <KanbanBoard />
+           </div>
         ) : (
-          <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-gray-50/80 border-b border-gray-100 uppercase tracking-wide text-xs text-gray-500">
-              <tr>
-                <th className="px-6 py-4 font-semibold">Date</th>
-                <th className="px-6 py-4 font-semibold">Time</th>
-                <th className="px-6 py-4 font-semibold">Customer Name</th>
-                <th className="px-6 py-4 font-semibold">Source</th>
-                <th className="px-6 py-4 font-semibold">Status</th>
-                <th className="px-6 py-4 font-semibold w-12 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-               {paginatedBookings.length === 0 ? (
-                 <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-gray-400">조회된 예약이 없습니다.</td>
-                 </tr>
-               ) : (
-                 paginatedBookings.map((b) => (
-                    <tr className="hover:bg-gray-50 transition-colors" key={b.id}>
-                       <td className="px-6 py-4 font-medium text-gray-900">
-                         {format(new Date(b.start_time), 'MM/dd')}
-                       </td>
-                       <td className="px-6 py-4">{format(new Date(b.start_time), 'HH:mm')}</td>
-                       <td className="px-6 py-4 font-medium text-gray-900">
-                           <div>{b.customer_name}</div>
-                           <div className="text-xs text-gray-400">{b.customer_email}</div>
-                       </td>
-                       <td className="px-6 py-4 text-gray-500 uppercase">{b.source}</td>
-                       <td className="px-6 py-4">
-                           <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                               b.status === 'confirmed' ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-                           }`}>
-                              {b.status === 'confirmed' ? '✅ Confirmed' : '❌ Canceled'} 
-                           </span>
-                       </td>
-                         <td className="px-6 py-4 text-right">
-                           {b.status === 'confirmed' ? (
-                             <button 
-                               onClick={() => handleCancelClick(b.id)}
-                               className="text-red-500 hover:text-red-700 font-medium text-xs transition-colors p-1.5 hover:bg-red-50 rounded"
-                             >
-                               Cancel
-                             </button>
-                           ) : (
-                             <div className="flex flex-col items-end gap-1">
-                               <span className="text-gray-400 text-xs italic mb-1">Canceled</span>
-                               <button 
-                                 onClick={() => handleRestoreClick(b.id)}
-                                 className="text-blue-500 hover:text-blue-700 font-medium text-[10px] uppercase tracking-wider transition-colors px-1 py-0.5 border border-blue-200 rounded hover:border-blue-500"
-                               >
-                                 Retrieve
-                               </button>
-                             </div>
-                           )}
-                        </td>
+          <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm mx-6">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    고객명
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    이메일
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    전화번호
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    예약 시간
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    상태
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    출처
+                  </th>
+                  <th scope="col" className="relative px-6 py-3">
+                    <span className="sr-only">Actions</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {loading ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">
+                      Loading bookings...
+                    </td>
+                  </tr>
+                ) : paginatedBookings.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">
+                      No bookings found.
+                    </td>
+                  </tr>
+                ) : (
+                  paginatedBookings.map((booking) => (
+                    <tr key={booking.id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {booking.customer_name}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {booking.customer_email}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {booking.customer_phone}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {format(new Date(booking.start_time), 'yyyy-MM-dd HH:mm')}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          booking.status === 'Confirmed' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }`}>
+                          {booking.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {booking.source}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        {booking.status === 'Confirmed' ? (
+                          <button 
+                            onClick={() => handleCancelClick(booking.id)}
+                            className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                            disabled={isProcessing}
+                          >
+                            Cancel
+                          </button>
+                        ) : (
+                          <button 
+                            onClick={() => handleRestoreClick(booking.id)}
+                            className="text-blue-600 hover:text-blue-900 disabled:opacity-50"
+                            disabled={isProcessing}
+                          >
+                            Retrieve
+                          </button>
+                        )}
+                      </td>
                     </tr>
-                 ))
-               )}
-            </tbody>
-          </table>
+                  ))
+                )}
+              </tbody>
+            </table>
+            {viewMode === 'list' && totalPages > 1 && (
+              <div className="flex items-center justify-between p-4 px-6 bg-gray-50 border-t border-gray-100">
+                <span className="text-sm text-gray-700">
+                  Showing <span className="font-semibold">{Math.min((currentPage - 1) * itemsPerPage + 1, bookings.length)}</span> to <span className="font-semibold">{Math.min(currentPage * itemsPerPage, bookings.length)}</span> of <span className="font-semibold">{bookings.length}</span> results
+                </span>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                  >
+                    Previous
+                  </button>
+                  <button 
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         )}
         
-        <div className="border-t border-gray-100 px-6 py-4 flex items-center justify-between bg-gray-50/30">
-             <button 
-               onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-               disabled={currentPage === 1}
-               className="text-sm border border-gray-300 bg-white px-3 py-1.5 rounded disabled:opacity-50 hover:bg-gray-50"
-             >
-               Previous
-             </button>
-             <span className="text-sm text-gray-500">Page {currentPage} of {totalPages}</span>
-             <button 
-               onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-               disabled={currentPage === totalPages}
-               className="text-sm border border-gray-300 bg-white px-3 py-1.5 rounded disabled:opacity-50 hover:bg-gray-50"
-             >
-               Next
-             </button>
-        </div>
-      </div>
-
-      {/* Custom Modal */}
-      {modal.show && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[100] animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl">
-            <h2 className={`text-xl font-bold mb-2 ${modal.type === 'danger' ? 'text-red-600' : 'text-blue-600'}`}>
-              {modal.title}
-            </h2>
-            <p className="text-gray-600 mb-8 leading-relaxed">
-              {modal.message}
-            </p>
-            <div className="flex space-x-3">
-              <button 
-                onClick={() => setModal(prev => ({ ...prev, show: false }))}
-                className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-medium hover:bg-gray-200 transition-colors"
-                disabled={isProcessing}
-              >
-                취소
-              </button>
-              <button 
-                onClick={modal.onConfirm}
-                className={`flex-1 text-white py-3 rounded-xl font-medium transition-colors ${
-                  modal.type === 'danger' ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'
-                }`}
-                disabled={isProcessing}
-              >
-                {isProcessing ? '처리 중...' : '확인'}
-              </button>
+        {/* Custom Modal */}
+        {modal.show && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[100] animate-in fade-in duration-200">
+            <div className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl">
+              <h2 className={`text-xl font-bold mb-2 ${modal.type === 'danger' ? 'text-red-600' : 'text-blue-600'}`}>
+                {modal.title}
+              </h2>
+              <p className="text-gray-600 mb-8 leading-relaxed">
+                {modal.message}
+              </p>
+              <div className="flex space-x-3">
+                <button 
+                  onClick={() => setModal(prev => ({ ...prev, show: false }))}
+                  className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-medium hover:bg-gray-200 transition-colors"
+                  disabled={isProcessing}
+                >
+                  취소
+                </button>
+                <button 
+                  onClick={modal.onConfirm}
+                  className={`flex-1 text-white py-3 rounded-xl font-medium transition-colors ${
+                    modal.type === 'danger' ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
+                  disabled={isProcessing}
+                >
+                  {isProcessing ? '처리 중...' : '확인'}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Processing Overlay */}
-      {isProcessing && !modal.show && (
-        <div className="fixed inset-0 bg-white/50 backdrop-blur-[2px] flex items-center justify-center z-[110]">
-          <div className="bg-white px-6 py-4 rounded-full shadow-xl border border-gray-100 flex items-center space-x-3">
-            <span className="relative flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
-            </span>
-            <span className="text-sm font-medium text-gray-700">시스템 처리 중...</span>
+        {/* Processing Overlay */}
+        {isProcessing && !modal.show && (
+          <div className="fixed inset-0 bg-white/50 backdrop-blur-[2px] flex items-center justify-center z-[110]">
+            <div className="bg-white px-6 py-4 rounded-full shadow-xl border border-gray-100 flex items-center space-x-3">
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+              </span>
+              <span className="text-sm font-medium text-gray-700">시스템 처리 중...</span>
+            </div>
           </div>
-        </div>
-      )}
+        )}
     </div>
   );
 }

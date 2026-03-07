@@ -9,7 +9,9 @@ export default function IntegrationsSettingsPage() {
   const [connectedEmail, setConnectedEmail] = useState<string | null>(null);
   const [instagramSettings, setInstagramSettings] = useState<any>({
     instagram_verify_token: '',
-    instagram_access_token: ''
+    instagram_access_token: '',
+    facebook_page_id: '',
+    facebook_page_name: ''
   });
   const [loading, setLoading] = useState(true);
   const [savingInstagram, setSavingInstagram] = useState(false);
@@ -215,7 +217,7 @@ export default function IntegrationsSettingsPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Verify Token</label>
                   <input 
                     type="text" 
-                    value={instagramSettings.instagram_verify_token}
+                    value={instagramSettings.instagram_verify_token || ''}
                     onChange={(e) => setInstagramSettings({...instagramSettings, instagram_verify_token: e.target.value})}
                     placeholder="E.g. my_custom_token"
                     className="w-full border border-gray-300 rounded-md p-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
@@ -223,15 +225,29 @@ export default function IntegrationsSettingsPage() {
                   <p className="mt-1 text-[11px] text-gray-400">Meta App Webhook 설정의 'Verify Token'과 일치해야 합니다.</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Access Token</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Facebook Page ID</label>
+                  <input 
+                    type="text" 
+                    readOnly
+                    value={instagramSettings?.facebook_page_name ? `${instagramSettings.facebook_page_name} (${instagramSettings.facebook_page_id})` : instagramSettings?.facebook_page_id || ''}
+                    placeholder="자동으로 연동됩니다"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-md p-2 text-sm text-gray-500 outline-none"
+                  />
+                  <p className="mt-1 text-[11px] text-gray-400">Access Token 저장 시 자동으로 확인되어 연동됩니다.</p>
+                </div>
+              </div>
+
+              <div className="grid sm:grid-cols-1 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Facebook Page Access Token</label>
                   <input 
                     type="password" 
-                    value={instagramSettings.instagram_access_token}
+                    value={instagramSettings.instagram_access_token || ''}
                     onChange={(e) => setInstagramSettings({...instagramSettings, instagram_access_token: e.target.value})}
-                    placeholder="Meta App Access Token"
+                    placeholder="EAAWtor..."
                     className="w-full border border-gray-300 rounded-md p-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                   />
-                  <p className="mt-1 text-[11px] text-gray-400">답장 기능을 위해 필요한 Page Access Token입니다.</p>
+                  <p className="mt-1 text-[11px] text-gray-400">답장 발송을 위한 권한(pages_messaging)이 포함된 페이지 토큰입니다.</p>
                 </div>
               </div>
             </div>

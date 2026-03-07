@@ -18,7 +18,11 @@ Deno.serve(async (req) => {
       customer_phone, 
       start_time, 
       end_time,
-      source = 'web' 
+      source = 'web',
+      tattoo_placement,
+      estimated_size,
+      notes,
+      reference_image_urls
     } = await req.json()
 
     if (!start_time || !end_time || !customer_name || !customer_email) {
@@ -74,13 +78,30 @@ Deno.serve(async (req) => {
         start_time,
         end_time,
         source,
-        status: 'confirmed',
+        status: 'inquiry',
+        tattoo_placement,
+        estimated_size,
+        notes,
         google_event_id: googleEventId
       })
       .select()
       .single();
 
     if (dbError) throw dbError;
+
+    // 4. Insert image references if any
+    if (reference_image_urls && Array.isArray(reference_image_urls) && reference_image_urls.length > 0) {
+       const imagesToInsert = reference_image_urls.map(url => ({
+          booking_id: bookingData.id,
+          image_url: url,
+          type: 'reference'
+       }));
+       const { error: imageError } = await supabaseClient
+          .from('images')
+          .insert(imagesToInsert);
+          
+       if (imageError) console.error("Failed to insert images", imageError);
+    }
 
     return new Response(JSON.stringify({ 
       success: true, 
