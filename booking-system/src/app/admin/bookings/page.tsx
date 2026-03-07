@@ -165,6 +165,12 @@ export default function AdminBookingsPage() {
     }
   };
 
+  const handleKanbanStatusChange = async (id: string, newStatus: string) => {
+    const booking = bookings.find(b => b.id === id);
+    if (!booking) return;
+    await handleStatusDropdown(id, newStatus, booking.status?.toLowerCase() || 'inquiry');
+  };
+
   const filteredBookings = bookings.filter(b => {
     const matchesSearch = b.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
                          b.customer_email?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -263,7 +269,7 @@ export default function AdminBookingsPage() {
 
         {viewMode === 'kanban' ? (
            <div className="p-6">
-             <KanbanBoard />
+             <KanbanBoard bookings={filteredBookings} onStatusChange={handleKanbanStatusChange} />
            </div>
         ) : (
           <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm mx-6">

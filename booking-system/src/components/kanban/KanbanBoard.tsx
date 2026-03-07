@@ -25,6 +25,11 @@ import { createClient } from '@/lib/supabase/client';
 import { KanbanColumn } from './KanbanColumn';
 import { KanbanCard, BookingType } from './KanbanCard';
 
+interface KanbanBoardProps {
+  bookings: any[];
+  onStatusChange?: (id: string, newStatus: string) => Promise<void>;
+}
+
 const COLUMNS = [
   { id: 'inquiry', title: '문의 (Inquiry)' },
   { id: 'consultation_scheduled', title: '상담 예정 (Consultation)' },
@@ -33,7 +38,7 @@ const COLUMNS = [
   { id: 'completed', title: '작업 완료 (Completed)' },
 ];
 
-export function KanbanBoard() {
+export function KanbanBoard({ bookings, onStatusChange }: KanbanBoardProps) {
   const [items, setItems] = useState<Record<string, BookingType[]>>({
     inquiry: [],
     consultation_scheduled: [],
@@ -53,25 +58,6 @@ export function KanbanBoard() {
   );
 
   useEffect(() => {
-    fetchBookings();
-  }, []);
-
-  const fetchBookings = async () => {
-    // Exclude canceled from kanban usually, or add a column
-    const { data: bookings, error } = await supabase
-      .from('bookings')
-      .select(`
-        *,
-        clients ( name, phone, instagram_id )
-      `)
-      .neq('status', 'canceled')
-      .order('start_time', { ascending: true });
-
-    if (error) {
-      console.error('Error fetching bookings:', error);
-      return;
-    }
-
     const newItems: Record<string, BookingType[]> = {
       inquiry: [],
       consultation_scheduled: [],
@@ -81,7 +67,9 @@ export function KanbanBoard() {
     };
 
     bookings.forEach((b: any) => {
-      // Map old 'confirmed'/'completed' or custom to one of the 5 statuses
+      // Allow canceled bookings to be mapped if needed, mostly Kanban hides them but if filtered in, decide column mapping. Usually excluded.
+      if (b.status === 'canceled') return;
+
       const s = COLUMNS.find(c => c.id === b.status) ? b.status : 'inquiry';
       newItems[s].push({
         id: b.id,
@@ -100,7 +88,7 @@ export function KanbanBoard() {
     });
 
     setItems(newItems);
-  };
+  }, [bookings]);
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
@@ -158,17 +146,22 @@ export function KanbanBoard() {
   };
 
   const updateBookingStatus = async (bookingId: string, newStatus: string) => {
-    const { error } = await supabase
-      .from('bookings')
-      .update({ status: newStatus })
-      .eq('id', bookingId);
-      
-    if (error) {
-      console.error('Failed to update status:', error);
-      alert('상태 업데이트에 실패했습니다.');
+    if (onStatusChange) {
+       // Let the parent component handle the DB update & sync so it reflects in parent's "bookings" state naturally
+       await onStatusChange(bookingId, newStatus);
     } else {
-       // Optional: Fire a webhook or alert user that automation would occur
-       console.log(`Booking ${bookingId} status changed to ${newStatus}`);
+      // Fallback if not provided
+      const { error } = await supabase
+        .from('bookings')
+        .update({ status: newStatus })
+        .eq('id', bookingId);
+        
+      if (error) {
+        console.error('Failed to update status:', error);
+        alert('상태 업데이트에 실패했습니다.');
+      } else {
+         console.log(`Booking ${bookingId} status changed to ${newStatus}`);
+      }
     }
   };
 
