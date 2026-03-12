@@ -22,7 +22,8 @@ Deno.serve(async (req) => {
       tattoo_placement,
       estimated_size,
       notes,
-      reference_image_urls
+      reference_image_urls,
+      instagram_user_id
     } = await req.json()
 
     if (!start_time || !end_time || !customer_name || !customer_email) {
@@ -68,7 +69,38 @@ Deno.serve(async (req) => {
       googleSyncError = gErr.message;
     }
 
-    // 3. Insert into database
+    // 3. Make sure Client exists if from Instagram
+    let clientId = null;
+    if (instagram_user_id) {
+       // Check if client exists
+       const { data: existingClient } = await supabaseClient
+         .from('clients')
+         .select('id')
+         .eq('instagram_id', instagram_user_id)
+         .maybeSingle();
+
+       if (existingClient) {
+          clientId = existingClient.id;
+       } else {
+          // Create client
+          const { data: newClient, error: clientErr } = await supabaseClient
+            .from('clients')
+            .insert({
+                name: customer_name,
+                email: customer_email,
+                phone: customer_phone,
+                instagram_id: instagram_user_id
+            })
+            .select()
+            .single();
+          
+          if (!clientErr && newClient) {
+             clientId = newClient.id;
+          }
+       }
+    }
+
+    // 4. Insert into database
     const { data: bookingData, error: dbError } = await supabaseClient
       .from('bookings')
       .insert({
@@ -82,14 +114,15 @@ Deno.serve(async (req) => {
         tattoo_placement,
         estimated_size,
         notes,
-        google_event_id: googleEventId
+        google_event_id: googleEventId,
+        client_id: clientId
       })
       .select()
       .single();
 
     if (dbError) throw dbError;
 
-    // 4. Insert image references if any
+    // 5. Insert image references if any
     if (reference_image_urls && Array.isArray(reference_image_urls) && reference_image_urls.length > 0) {
        const imagesToInsert = reference_image_urls.map(url => ({
           booking_id: bookingData.id,

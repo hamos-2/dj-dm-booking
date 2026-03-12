@@ -137,17 +137,17 @@ export default function AdminBookingsPage() {
     // Defer to proper Google Calendar sync events for cancel/restore
     if (newStatus === 'canceled') {
       // The select will temporary visually fall back until canceled completes
-      document.activeElement?.blur(); 
+      (document.activeElement as HTMLElement)?.blur(); 
       handleCancelClick(id);
       return;
     }
     if (oldStatus === 'canceled' && newStatus === 'confirmed') {
-      document.activeElement?.blur();
+      (document.activeElement as HTMLElement)?.blur();
       handleRestoreClick(id);
       return;
     }
     if (oldStatus === 'canceled' && newStatus !== 'confirmed') {
-      document.activeElement?.blur();
+      (document.activeElement as HTMLElement)?.blur();
       alert("취소된 예약은 '예약 확정(Confirmed)'으로 먼저 복구한 뒤 다른 상태로 변경해주세요.");
       return;
     }

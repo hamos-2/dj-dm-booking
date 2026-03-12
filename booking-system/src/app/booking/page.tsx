@@ -12,6 +12,8 @@ export default function BookingPage() {
   const [availableSlots, setAvailableSlots] = useState<{start: string, end: string}[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingDates, setIsLoadingDates] = useState(true);
+  const [openDates, setOpenDates] = useState<string[]>([]);
   
   // Form state
   const [name, setName] = useState('');
@@ -42,17 +44,11 @@ export default function BookingPage() {
       setSelectedSlot(null);
 
       try {
-        const { data, error } = await supabase.functions.invoke('getAvailableSlots', {
-          headers: {
-            Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`
-          },
-          body: { date: selectedDate, timezone: 'Asia/Seoul' }
-        });
-
-        if (error) throw error;
+        const res = await fetch(`/api/availability/slots?date=${selectedDate}`);
+        const data = await res.json();
         
-        // Edge function에서 반환되는 형태에 맞춰 슬롯 상태 업데이트 
-        // (Mock에서는 `{slots: []}` 로 설정했습니다)
+        if (data.error) throw new Error(data.error);
+        
         setAvailableSlots(data?.slots || []);
         
       } catch (error) {
@@ -64,7 +60,24 @@ export default function BookingPage() {
     }
 
     fetchSlots();
-  }, [selectedDate]);
+  }, [selectedDate, supabase]);
+
+  useEffect(() => {
+    async function loadDates() {
+      try {
+        const res = await fetch('/api/availability/dates');
+        const data = await res.json();
+        setOpenDates(data.openDates || []);
+        if (data.openDates && data.openDates.length > 0) {
+          setSelectedDate(data.openDates[0]);
+        } else {
+          setIsLoadingDates(false);
+        }
+      } catch(e) { console.error('Error loading dates:', e); }
+      setIsLoadingDates(false);
+    }
+    loadDates();
+  }, []);
 
   // 예약 확정 처리 (Edge Function 호출)
   const handleBooking = async () => {
@@ -178,7 +191,10 @@ export default function BookingPage() {
               type="date" 
               value={selectedDate}
               min={todayStr}
-              onChange={(e) => setSelectedDate(e.target.value)}
+              onChange={(e) => {
+                setSelectedDate(e.target.value);
+                setSelectedSlot(null);
+              }}
               className="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 transition-shadow text-gray-900"
             />
           </div>

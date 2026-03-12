@@ -8,21 +8,33 @@ export default function AvailabilitySettingsPage() {
   const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   
   const [schedule, setSchedule] = useState<any[]>([]);
+  const [specificDates, setSpecificDates] = useState<{date: string, slotsString: string}[]>([]);
   const [slotDuration, setSlotDuration] = useState(60);
   const [bufferTime, setBufferTime] = useState(15);
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<{type: 'idle' | 'loading' | 'success' | 'error', message?: string}>({type: 'idle'});
 
+  // Calculate min date (today) in local timezone
+  const today = new Date();
+  const offset = today.getTimezoneOffset() * 60000;
+  const localISOTime = new Date(today.getTime() - offset).toISOString();
+  const todayStr = localISOTime.split('T')[0];
+
   useEffect(() => {
     async function fetchAvailability() {
       try {
-        const response = await fetch('/api/admin/availability');
-        const result = await response.json();
+        const [availRes, specificRes] = await Promise.all([
+          fetch('/api/admin/availability'),
+          fetch('/api/admin/specific_availability')
+        ]);
         
-        if (result.data && result.data.length > 0) {
-          setSchedule(result.data);
-          setSlotDuration(result.data[0].slot_duration_minutes);
-          setBufferTime(result.data[0].buffer_minutes);
+        const availResult = await availRes.json();
+        const specificResult = await specificRes.json();
+        
+        if (availResult.data && availResult.data.length > 0) {
+          setSchedule(availResult.data);
+          setSlotDuration(availResult.data[0].slot_duration_minutes);
+          setBufferTime(availResult.data[0].buffer_minutes);
         } else {
           // Initialize with default values if empty
           const defaults = DAYS.map((_, i) => ({
@@ -34,6 +46,13 @@ export default function AvailabilitySettingsPage() {
             buffer_minutes: 15
           }));
           setSchedule(defaults);
+        }
+
+        if (specificResult.data) {
+          setSpecificDates(specificResult.data.map((d: any) => ({
+            date: d.date,
+            slotsString: Array.isArray(d.slots) ? d.slots.join(', ') : (d.slots || '')
+          })));
         }
       } catch (error) {
         console.error('Failed to fetch availability:', error);
@@ -55,6 +74,27 @@ export default function AvailabilitySettingsPage() {
     ));
   };
 
+  const handleAddSpecificDate = () => {
+    setSpecificDates([...specificDates, { date: '', slotsString: '' }]);
+  };
+
+  const handleUpdateSpecificDate = (index: number, field: 'date' | 'slotsString', value: any) => {
+    const newDates = [...specificDates];
+    newDates[index][field] = value;
+    setSpecificDates(newDates);
+  };
+
+  const handleRemoveSpecificDate = async (index: number) => {
+    const dateToRemove = specificDates[index];
+    if (dateToRemove.date) {
+      // Optional: Delete from DB immediately
+      await fetch(`/api/admin/specific_availability?date=${dateToRemove.date}`, { method: 'DELETE' });
+    }
+    const newDates = [...specificDates];
+    newDates.splice(index, 1);
+    setSpecificDates(newDates);
+  };
+
   const handleSave = async () => {
     setSaveStatus({ type: 'loading' });
     try {
@@ -73,9 +113,21 @@ export default function AvailabilitySettingsPage() {
       });
 
       const result = await response.json();
-
       if (result.error) throw new Error(result.error);
       
+      // Save specific dates
+      for (const sd of specificDates) {
+        if (!sd.date) continue; // Skip empty
+        const slotsArray = sd.slotsString ? sd.slotsString.split(',').map((s: string) => s.trim()).filter((s: string) => s) : [];
+        const sdResponse = await fetch('/api/admin/specific_availability', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date: sd.date, slots: slotsArray })
+        });
+        const sdResult = await sdResponse.json();
+        if (sdResult.error) throw new Error(sdResult.error);
+      }
+
       setSaveStatus({ type: 'success', message: '설정이 저장되었습니다!' });
       
       setTimeout(() => {
@@ -170,6 +222,52 @@ export default function AvailabilitySettingsPage() {
                 </div>
                );
             })}
+        </div>
+
+        <div className="space-y-4 pt-8 border-t border-gray-100">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h3 className="font-semibold text-gray-900">특정 일자 및 슬롯 설정 (Overrides)</h3>
+                <p className="text-sm text-gray-500">특정 날짜에만 예약을 받거나, 특정 시간에만 오픈하고 싶을 때 사용하세요. 여기에 날짜가 등록되면 위의 정규 일정을 무시하고 이 설정만 예약 페이지에 노출됩니다.</p>
+              </div>
+              <button 
+                onClick={handleAddSpecificDate}
+                className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-md text-sm font-medium hover:bg-blue-100 transition-colors"
+              >
+                + 날짜 추가
+              </button>
+            </div>
+
+            {specificDates.length === 0 ? (
+               <div className="text-sm text-gray-400 italic p-4 bg-gray-50 rounded-lg text-center border border-gray-100">
+                 등록된 특정 일정 내역이 없습니다. (위의 주간 스케줄에 따릅니다)
+               </div>
+            ) : (
+               specificDates.map((item, idx) => (
+                 <div key={idx} className="flex flex-col sm:flex-row items-center gap-3 p-3 bg-indigo-50/30 rounded-lg border border-indigo-100">
+                    <input 
+                      type="date" 
+                      min={todayStr}
+                      value={item.date} 
+                      onChange={(e) => handleUpdateSpecificDate(idx, 'date', e.target.value)}
+                      className="border border-indigo-200 rounded-md p-1.5 px-3 text-sm flex-shrink-0 text-gray-900 focus:ring-1 focus:ring-indigo-500 outline-none" 
+                    />
+                    <input 
+                      type="text" 
+                      placeholder="예) 13:00, 15:00, 16:30 (쉼표로 구분)" 
+                      value={item.slotsString} 
+                      onChange={(e) => handleUpdateSpecificDate(idx, 'slotsString', e.target.value)}
+                      className="border border-indigo-200 rounded-md p-1.5 px-3 text-sm w-full text-gray-900 focus:ring-1 focus:ring-indigo-500 outline-none flex-1" 
+                    />
+                    <button 
+                      onClick={() => handleRemoveSpecificDate(idx)}
+                      className="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 p-1.5 px-3 rounded-md text-sm font-medium transition-colors"
+                    >
+                      삭제
+                    </button>
+                 </div>
+               ))
+            )}
         </div>
 
         <div className="pt-4 flex flex-col items-end gap-3">

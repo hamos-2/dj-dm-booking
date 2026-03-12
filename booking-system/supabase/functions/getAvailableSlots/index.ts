@@ -27,15 +27,24 @@ Deno.serve(async (req) => {
     // We use UTC to get the day of week for the YYYY-MM-DD string safely
     const dayOfWeek = new Date(`${date}T00:00:00Z`).getUTCDay()
 
-    // 1. Fetch Availability
+    // 1. Fetch Specific Availability first
+    const { data: specific, error: specificError } = await supabaseClient
+      .from('specific_availability')
+      .select('slots')
+      .eq('date', date)
+      .single()
+
+    const hasSpecificSlots = specific && specific.slots && specific.slots.length > 0;
+
+    // 2. Fetch Availability (for settings like duration/buffer, or weekly fallback)
     const { data: avail, error: availError } = await supabaseClient
       .from('availability')
       .select('*')
       .eq('day_of_week', dayOfWeek)
-      .eq('is_active', true)
       .single()
 
-    if (availError || !avail) {
+    // If no specific slots AND standard weekly day is inactive/missing, return empty
+    if (!hasSpecificSlots && (!avail || !avail.is_active)) {
       return new Response(JSON.stringify({ slots: [] }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
@@ -58,41 +67,63 @@ Deno.serve(async (req) => {
 
     if (bookingsError) throw bookingsError
 
-    // 3. Generate Slots
+    // 4. Generate Slots
     const slots = []
-    const [startH, startM] = avail.start_time.split(':').map(Number)
-    const [endH, endM] = avail.end_time.split(':').map(Number)
-    
-    const duration = avail.slot_duration_minutes
-    const buffer = avail.buffer_minutes
-
-    let currentMinutes = startH * 60 + startM
-    const endMinutes = endH * 60 + endM
-
+    const duration = avail?.slot_duration_minutes || 60
+    const buffer = avail?.buffer_minutes || 15
     const baseUTC = Date.UTC(year, month - 1, day) - (9 * 60 * 60 * 1000)
 
-    while (currentMinutes + duration <= endMinutes) {
-      const sStartUTC = baseUTC + (currentMinutes * 60 * 1000)
-      const sEndUTC = sStartUTC + (duration * 60 * 1000)
-      
-      const sStartISO = new Date(sStartUTC).toISOString()
-      const sEndISO = new Date(sEndUTC).toISOString()
+    if (hasSpecificSlots) {
+       // Use specific overrides
+       for (const timeStr of specific.slots) {
+         try {
+           const [h, m] = timeStr.split(':').map(Number)
+           const sStartUTC = baseUTC + ((h * 60 + m) * 60 * 1000)
+           const sEndUTC = sStartUTC + (duration * 60 * 1000)
 
-      // Overlap check
-      const isTaken = existingBookings?.some(b => {
-        const bStart = new Date(b.start_time).getTime()
-        const bEnd = new Date(b.end_time).getTime()
-        return (sStartUTC < bEnd && bStart < sEndUTC)
-      })
+           const sStartISO = new Date(sStartUTC).toISOString()
+           const sEndISO = new Date(sEndUTC).toISOString()
 
-      if (!isTaken) {
-        slots.push({
-          start: sStartISO,
-          end: sEndISO
-        })
-      }
+           // Overlap check
+           const isTaken = existingBookings?.some(b => {
+             const bStart = new Date(b.start_time).getTime()
+             const bEnd = new Date(b.end_time).getTime()
+             return (sStartUTC < bEnd && bStart < sEndUTC)
+           })
 
-      currentMinutes += duration + buffer
+           if (!isTaken) {
+             slots.push({ start: sStartISO, end: sEndISO })
+           }
+         } catch(e) { console.error('Error parsing strict time:', timeStr) }
+       }
+    } else {
+       // Regular generation
+       const [startH, startM] = avail.start_time.split(':').map(Number)
+       const [endH, endM] = avail.end_time.split(':').map(Number)
+
+       let currentMinutes = startH * 60 + startM
+       const endMinutes = endH * 60 + endM
+
+       while (currentMinutes + duration <= endMinutes) {
+         const sStartUTC = baseUTC + (currentMinutes * 60 * 1000)
+         const sEndUTC = sStartUTC + (duration * 60 * 1000)
+         
+         const sStartISO = new Date(sStartUTC).toISOString()
+         const sEndISO = new Date(sEndUTC).toISOString()
+
+         // Overlap check
+         const isTaken = existingBookings?.some(b => {
+           const bStart = new Date(b.start_time).getTime()
+           const bEnd = new Date(b.end_time).getTime()
+           return (sStartUTC < bEnd && bStart < sEndUTC)
+         })
+
+         if (!isTaken) {
+           slots.push({ start: sStartISO, end: sEndISO })
+         }
+
+         currentMinutes += duration + buffer
+       }
     }
 
     return new Response(JSON.stringify({ slots }), {

@@ -3,8 +3,9 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
-export default function BookingConfirmationPage() {
+function BookingConfirmationContent() {
   const searchParams = useSearchParams();
   const name = searchParams.get('name') || 'Guest';
   const time = searchParams.get('time') || 'Selected Time';
@@ -39,5 +40,13 @@ export default function BookingConfirmationPage() {
         </Link>
       </div>
     </main>
+  );
+}
+
+export default function BookingConfirmationPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">Loading confirmation details...</div>}>
+      <BookingConfirmationContent />
+    </Suspense>
   );
 }

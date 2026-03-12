@@ -125,7 +125,7 @@ export default function AdminDmInboxPage() {
   const selectedConversation = conversations.find(c => c.userId === selectedUserId);
 
   const handleConvert = async () => {
-    if (!selectedUserId || !extractName) {
+    if (!selectedUserId || !extractName || !selectedConversation) {
        setConvertStatus({type: 'error', message: "고객 이름을 입력해주세요."});
        return;
     }
@@ -149,7 +149,8 @@ export default function AdminDmInboxPage() {
           customer_phone: extractContact.includes('@') ? '' : extractContact,
           start_time: startObj.toISOString(),
           end_time: endObj.toISOString(),
-          source: 'instagram'
+          source: 'instagram',
+          instagram_user_id: selectedConversation.userId
         }
       });
 
