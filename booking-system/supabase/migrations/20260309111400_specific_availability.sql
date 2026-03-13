@@ -8,9 +8,11 @@ CREATE TABLE IF NOT EXISTS specific_availability (
 -- RLS
 ALTER TABLE specific_availability ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Public can read specific availability" ON specific_availability;
 CREATE POLICY "Public can read specific availability" 
   ON specific_availability FOR SELECT TO public 
   USING (true);
 
+DROP POLICY IF EXISTS "Service role can manage specific availability" ON specific_availability;
 CREATE POLICY "Service role can manage specific availability" 
   ON specific_availability USING (true);

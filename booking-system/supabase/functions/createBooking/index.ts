@@ -23,7 +23,8 @@ Deno.serve(async (req) => {
       estimated_size,
       notes,
       reference_image_urls,
-      instagram_user_id
+      instagram_user_id,
+      flash_id
     } = await req.json()
 
     if (!start_time || !end_time || !customer_name || !customer_email) {
@@ -115,7 +116,8 @@ Deno.serve(async (req) => {
         estimated_size,
         notes,
         google_event_id: googleEventId,
-        client_id: clientId
+        client_id: clientId,
+        flash_id: flash_id || null
       })
       .select()
       .single();

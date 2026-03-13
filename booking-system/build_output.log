@@ -1,0 +1,56 @@
+
+> booking-system@0.1.0 build
+> next build
+
+▲ Next.js 16.1.6 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 2.2s
+  Running TypeScript ...
+  Collecting page data using 11 workers ...
+  Generating static pages using 11 workers (0/30) ...
+  Generating static pages using 11 workers (7/30) 
+  Generating static pages using 11 workers (14/30) 
+  Generating static pages using 11 workers (22/30) 
+✓ Generating static pages using 11 workers (30/30) in 129.1ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /admin
+├ ƒ /admin/bookings
+├ ƒ /admin/flashbook
+├ ƒ /admin/instagram
+├ ƒ /admin/settings
+├ ƒ /admin/settings/availability
+├ ƒ /admin/settings/environment
+├ ƒ /api/admin/availability
+├ ƒ /api/admin/bookings
+├ ƒ /api/admin/bookings/[id]/cancel
+├ ƒ /api/admin/bookings/[id]/restore
+├ ƒ /api/admin/env
+├ ƒ /api/admin/flashbook
+├ ƒ /api/admin/flashbook/[id]
+├ ƒ /api/admin/flashbook/upload
+├ ƒ /api/admin/integrations/google
+├ ƒ /api/admin/integrations/instagram
+├ ƒ /api/admin/setup_db
+├ ƒ /api/admin/specific_availability
+├ ƒ /api/auth/google
+├ ƒ /api/auth/google/callback
+├ ƒ /api/auth/signup
+├ ƒ /api/availability/dates
+├ ƒ /api/availability/slots
+├ ƒ /api/debug-availability
+├ ƒ /api/debug-bookings
+├ ƒ /booking
+├ ƒ /booking/confirm
+└ ƒ /flashbook
+
+
+ƒ Proxy (Middleware)
+
+ƒ  (Dynamic)  server-rendered on demand
+

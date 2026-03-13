@@ -108,6 +108,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <span>Bookings</span>
           </Link>
 
+          <Link href="/admin/flashbook" className={linkClass('/admin/flashbook')}>
+            <span>🖼️</span>
+            <span>Flashbook</span>
+          </Link>
+
           <Link href="/admin/instagram" className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
             isActive('/admin/instagram') 
               ? 'bg-gray-100 text-gray-900' 

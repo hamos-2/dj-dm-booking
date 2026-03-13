@@ -100,8 +100,6 @@ Supabase(PostgreSQL) 기반으로 설계되어있습니다.
 
 ## 5. 추가 기록 및 향후 개발 추천 기능 (Roadmap & Recommendations)
 
-* **Supabase 로컬 환경 매핑(Local Dev Env)**: 
-  현재 클라우드 원격 DB 스키마에 의존하고 있다면, `supabase init` 및 `supabase start` 를 통해 철저하게 오프라인에서도 돌아가는 로컬 Docker 환경을 갖춰놓는 것을 권장합니다 (새로운 Edge Function 테스트 시 비용 절약 보장).
 * **Payment 연동 (결제 관리)**: 
   예약금(pending_deposit 상태)의 입금 관리 프로세스를 현재 수동에서, Stripe 또는 한국 결제 Webhook으로 이어지도록 구성을 확장할 수 있습니다.
 * **통계 및 애널리틱스 (Analytics Dashboard)**:

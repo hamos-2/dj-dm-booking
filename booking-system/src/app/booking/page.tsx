@@ -1,11 +1,24 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { createClient } from '@/lib/supabase/client';
 import { format } from 'date-fns';
 
-export default function BookingPage() {
+export default function BookingPageWrapper() {
+  return (
+    <Suspense fallback={<div className="flex justify-center items-center h-screen">Loading...</div>}>
+      <BookingPage />
+    </Suspense>
+  );
+}
+
+function BookingPage() {
+  const searchParams = useSearchParams();
+  const flash_id = searchParams.get('flash_id');
+  const [flashDesign, setFlashDesign] = useState<any>(null);
+
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toLocaleDateString('sv').split('T')[0] // Local YYYY-MM-DD
   );
@@ -35,6 +48,19 @@ export default function BookingPage() {
       setReferenceImages(Array.from(e.target.files));
     }
   };
+
+  useEffect(() => {
+    if (flash_id) {
+      supabase.from('flash_designs').select('*').eq('id', flash_id).single()
+        .then(({ data }) => {
+          if (data) {
+            setFlashDesign(data);
+            if (data.size) setEstimatedSize(data.size);
+            if (data.body_placement_suggestion) setTattooPlacement(data.body_placement_suggestion);
+          }
+        });
+    }
+  }, [flash_id, supabase]);
 
   // 날짜 변경 시 슬롯 조회 (Edge Function 호출)
   useEffect(() => {
@@ -145,7 +171,8 @@ export default function BookingPage() {
           tattoo_placement: tattooPlacement,
           estimated_size: estimatedSize,
           notes: notes,
-          reference_image_urls: reference_image_urls
+          reference_image_urls: reference_image_urls,
+          flash_id: flash_id
         }
       });
 
@@ -182,8 +209,24 @@ export default function BookingPage() {
         
         {/* Left Side: Summary / Date Picker */}
         <div className="md:w-1/2 p-8 border-r border-gray-100">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Book a Session</h1>
-          <p className="text-gray-500 mb-8">Select a date to see available times.</p>
+          {flashDesign ? (
+            <div className="mb-8 p-6 bg-white border border-gray-200 rounded-xl shadow-sm">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Selected Design</h2>
+              <div className="flex gap-4 items-start">
+                <img src={flashDesign.image_url} alt={flashDesign.title} className="w-24 h-24 object-cover rounded-lg border border-gray-100" />
+                <div>
+                  <h3 className="font-semibold text-lg">{flashDesign.title}</h3>
+                  <p className="text-sm text-gray-500 mb-1">{flashDesign.size ? `Size: ${flashDesign.size}` : ''}</p>
+                  <p className="text-sm font-medium">Price: ₩{flashDesign.price?.toLocaleString() || 'N/A'}</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="mb-8">
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">Book a Session</h1>
+              <p className="text-gray-500">Select a date to see available times.</p>
+            </div>
+          )}
           
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">Select Date</label>

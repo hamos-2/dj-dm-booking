@@ -1,0 +1,63 @@
+
+> booking-system@0.1.0 dev
+> next dev
+
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.0.104:3000
+- Environments: .env.local
+
+✓ Starting...
+✓ Ready in 1230ms
+ GET /admin/flashbook 200 in 2.8s (compile: 1101ms, proxy.ts: 1574ms, render: 159ms)
+ GET /api/admin/flashbook?all=true 200 in 1787ms (compile: 1146ms, proxy.ts: 66ms, render: 575ms)
+ GET /api/admin/flashbook?all=true 200 in 129ms (compile: 4ms, proxy.ts: 6ms, render: 119ms)
+ POST /api/admin/flashbook/upload 201 in 813ms (compile: 180ms, proxy.ts: 25ms, render: 608ms)
+ POST /api/admin/flashbook 201 in 483ms (compile: 2ms, proxy.ts: 5ms, render: 475ms)
+ GET /api/admin/flashbook?all=true 200 in 124ms (compile: 3ms, proxy.ts: 11ms, render: 110ms)
+ PUT /api/admin/flashbook/b74c811b-453f-47bc-a4a7-ff9d5cc4ea51 200 in 1763ms (compile: 997ms, proxy.ts: 18ms, render: 748ms)
+ GET /api/admin/flashbook?all=true 200 in 179ms (compile: 4ms, proxy.ts: 16ms, render: 159ms)
+ GET /flashbook 200 in 735ms (compile: 574ms, proxy.ts: 24ms, render: 137ms)
+ GET /api/admin/flashbook 200 in 207ms (compile: 4ms, proxy.ts: 6ms, render: 198ms)
+ GET /booking?flash_id=b74c811b-453f-47bc-a4a7-ff9d5cc4ea51 200 in 438ms (compile: 397ms, proxy.ts: 20ms, render: 21ms)
+ GET /api/availability/slots?date=2026-03-13 200 in 542ms (compile: 121ms, proxy.ts: 25ms, render: 396ms)
+ GET /api/availability/dates 200 in 672ms (compile: 76ms, proxy.ts: 20ms, render: 577ms)
+ GET /api/availability/slots?date=2026-03-13 200 in 327ms (compile: 1793µs, proxy.ts: 8ms, render: 317ms)
+ GET /api/availability/dates 200 in 510ms (compile: 5ms, proxy.ts: 10ms, render: 496ms)
+ GET /api/availability/slots?date=2026-03-19 200 in 610ms (compile: 12ms, proxy.ts: 7ms, render: 591ms)
+ GET /booking/confirm?name=kafka&time=March%2019%2C%202026%2009%3A00 200 in 1916ms (compile: 285ms, proxy.ts: 1456ms, render: 175ms)
+ GET / 200 in 61ms (compile: 35ms, proxy.ts: 11ms, render: 15ms)
+ GET /admin 200 in 129ms (compile: 46ms, proxy.ts: 22ms, render: 62ms)
+ GET /api/admin/bookings 200 in 470ms (compile: 27ms, proxy.ts: 9ms, render: 433ms)
+ GET /api/admin/bookings 200 in 166ms (compile: 3ms, proxy.ts: 9ms, render: 154ms)
+ GET /admin/bookings 200 in 78ms (compile: 43ms, proxy.ts: 9ms, render: 25ms)
+ GET /api/admin/bookings 200 in 153ms (compile: 3ms, proxy.ts: 10ms, render: 140ms)
+ GET /api/admin/bookings 200 in 160ms (compile: 3ms, proxy.ts: 8ms, render: 149ms)
+ GET /admin/flashbook 200 in 32ms (compile: 8ms, proxy.ts: 12ms, render: 12ms)
+ GET /api/admin/flashbook?all=true 200 in 309ms (compile: 5ms, proxy.ts: 8ms, render: 296ms)
+ GET /api/admin/flashbook?all=true 200 in 207ms (compile: 1470µs, proxy.ts: 13ms, render: 193ms)
+ GET /admin/bookings 200 in 22ms (compile: 3ms, proxy.ts: 6ms, render: 12ms)
+ GET /api/admin/bookings 200 in 195ms (compile: 2ms, proxy.ts: 8ms, render: 185ms)
+ GET /api/admin/bookings 200 in 141ms (compile: 3ms, proxy.ts: 7ms, render: 130ms)
+ GET /api/admin/bookings 200 in 229ms (compile: 5ms, proxy.ts: 18ms, render: 206ms)
+ GET /admin/flashbook 200 in 35ms (compile: 9ms, proxy.ts: 12ms, render: 15ms)
+ GET /api/admin/flashbook?all=true 200 in 204ms (compile: 5ms, proxy.ts: 15ms, render: 185ms)
+ GET /api/admin/flashbook?all=true 200 in 157ms (compile: 5ms, proxy.ts: 13ms, render: 139ms)
+ GET /admin/bookings 200 in 40ms (compile: 11ms, proxy.ts: 11ms, render: 18ms)
+ GET /admin/bookings 200 in 26ms (compile: 4ms, proxy.ts: 9ms, render: 14ms)
+ GET /api/admin/bookings 200 in 781ms (compile: 3ms, proxy.ts: 8ms, render: 770ms)
+ GET /api/admin/bookings 200 in 239ms (compile: 4ms, proxy.ts: 10ms, render: 225ms)
+ GET /admin/flashbook 200 in 445ms (compile: 11ms, proxy.ts: 420ms, render: 15ms)
+ GET /admin/flashbook 200 in 23ms (compile: 5ms, proxy.ts: 6ms, render: 12ms)
+ GET /api/admin/flashbook?all=true 200 in 557ms (compile: 1745µs, proxy.ts: 5ms, render: 550ms)
+ GET /api/admin/flashbook?all=true 200 in 215ms (compile: 4ms, proxy.ts: 9ms, render: 203ms)
+ GET /flashbook 200 in 61ms (compile: 11ms, proxy.ts: 13ms, render: 36ms)
+ GET /api/admin/flashbook 200 in 1267ms (compile: 4ms, proxy.ts: 5ms, render: 1258ms)
+✓ Compiled in 109ms
+ GET /admin/flashbook 200 in 2.7s (compile: 294ms, proxy.ts: 2.2s, render: 181ms)
+ GET /api/admin/flashbook?all=true 200 in 685ms (compile: 2ms, proxy.ts: 6ms, render: 677ms)
+ GET /api/admin/flashbook?all=true 200 in 151ms (compile: 1504µs, proxy.ts: 14ms, render: 136ms)
+ PUT /api/admin/flashbook/b74c811b-453f-47bc-a4a7-ff9d5cc4ea51 200 in 418ms (compile: 11ms, proxy.ts: 10ms, render: 397ms)
+ GET /api/admin/flashbook?all=true 200 in 179ms (compile: 9ms, proxy.ts: 4ms, render: 166ms)
+ GET /flashbook 200 in 206ms (compile: 80ms, proxy.ts: 10ms, render: 116ms)
+ GET /api/admin/flashbook?all=true 200 in 424ms (compile: 1576µs, proxy.ts: 7ms, render: 415ms)
